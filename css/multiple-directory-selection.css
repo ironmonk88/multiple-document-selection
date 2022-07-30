@@ -1,0 +1,19 @@
+.sidebar-tab.directory.multiple-select {
+    position: relative;
+}
+    
+.sidebar-tab.directory.multiple-select:after {
+    content: '';
+    position: absolute;
+    width: calc(100% - 2px);
+    height: calc(100% - 2px);
+    top: 0px;
+    left: 0px;
+    border: 1px solid #FF0000;
+    border-radius: 4px;
+    pointer-events: none;
+}
+
+.sidebar-tab.directory.multiple-select .directory-list .directory-item.document.selected {
+    background-color: #ff6400;
+}

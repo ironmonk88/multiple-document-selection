@@ -1,0 +1,6 @@
+{
+  "MultipleDirectorySelection.long-press.name": "Long Press Length",
+  "MultipleDirectorySelection.long-press.hint": "The length of time to press before a group selection is activated. (sec)",
+
+  "MultipleDirectorySelection.DeleteWarning": "These {count} documents will be permanently deleted and cannot be recovered."
+}
