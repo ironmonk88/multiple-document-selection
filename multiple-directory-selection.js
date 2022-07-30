@@ -311,7 +311,7 @@ export class MultipleDirectorySelection {
             }
 
             const configClass = WithOwnershipConfig(isNewerVersion(game.version, "9.99999") ? DocumentOwnershipConfig : PermissionControl);
-            new configClass({ documents, apps: {}, uuid: "" }, {
+            new configClass({ documents, apps: {}, uuid: "", testUserPermission: () => { return true; }, isOwner: true }, {
                 top: Math.min(li[0].offsetTop, window.innerHeight - 350),
                 left: window.innerWidth - 720
             }).render(true);
