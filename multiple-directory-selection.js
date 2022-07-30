@@ -1,5 +1,5 @@
 import { registerSettings } from "./settings.js";
-import { MultipleDocumentOwnershipConfig } from "./multiple-document-ownership-config.js";
+import { WithOwnershipConfig } from "./multiple-document-ownership-config.js";
 
 export let debug = (...args) => {
     if (debugEnabled > 1) console.log("DEBUG: multiple-directory-selection | ", ...args);
@@ -309,7 +309,9 @@ export class MultipleDirectorySelection {
             for (let id of tab._groupSelect) {
                 documents.push(collection.get(id));
             }
-            new MultipleDocumentOwnershipConfig({ documents, apps: {}, uuid: "" }, {
+
+            const configClass = WithOwnershipConfig(isNewerVersion(game.version, "9.99999") ? DocumentOwnershipConfig : PermissionControl);
+            new configClass({ documents, apps: {}, uuid: "" }, {
                 top: Math.min(li[0].offsetTop, window.innerHeight - 350),
                 left: window.innerWidth - 720
             }).render(true);
