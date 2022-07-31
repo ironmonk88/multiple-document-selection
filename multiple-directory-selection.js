@@ -99,6 +99,39 @@ export class MultipleDirectorySelection {
             }
         }
 
+        let importFromJSON = async function (wrapped, ...args) {
+            let json = args[0];
+            let data = JSON.parse(json);
+
+            if (data instanceof Array) {
+                let items = [];
+                for (let obj of data) {
+                    let document = this.collection.fromCompendium(obj, { addFlags: false });
+                    items.push(document);
+                }
+                if (items.length)
+                    this.constructor.createDocuments(items);
+            } else
+                return wrapped(...args);
+        }
+
+        if (game.modules.get("lib-wrapper")?.active) {
+            libWrapper.register("multiple-directory-selection", "Actor.prototype.importFromJSON", importFromJSON, "MIXED");
+            libWrapper.register("multiple-directory-selection", "Cards.prototype.importFromJSON", importFromJSON, "MIXED");
+            libWrapper.register("multiple-directory-selection", "Item.prototype.importFromJSON", importFromJSON, "MIXED");
+            libWrapper.register("multiple-directory-selection", "JournalEntry.prototype.importFromJSON", importFromJSON, "MIXED");
+            libWrapper.register("multiple-directory-selection", "Playlist.prototype.importFromJSON", importFromJSON, "MIXED");
+            libWrapper.register("multiple-directory-selection", "Scene.prototype.importFromJSON", importFromJSON, "MIXED");
+            libWrapper.register("multiple-directory-selection", "RollTable.prototype.importFromJSON", importFromJSON, "MIXED");
+        } else {
+            for (let entry of [Actor, Cards, Item, JournalEntry, Playlist, Scene, RollTable]) {
+                const oldImportFromJSON = entry.prototype.importFromJSON;
+                entry.prototype.importFromJSON = function (event) {
+                    return importFromJSON.call(this, oldImportFromJSON.bind(this), ...arguments);
+                }
+            }
+        }
+
         for (let tabName of ["ActorDirectory", "CardsDirectory", "ItemDirectory", "JournalDirectory", "playlPlaylistDirectoryists", "SceneDirectory", "RollTableDirectory"]) {
             Hooks.on(`get${tabName}EntryContext`, (html, menuItems) => {
                 window.setTimeout(() => {
@@ -176,18 +209,20 @@ export class MultipleDirectorySelection {
     }
 
     static onMouseDown(event) {
-        let id = event.currentTarget.closest(".document").dataset.documentId;
-        let that = this;
-        this._startPointerDown = window.setTimeout(() => {
-            if (that._startPointerDown) {
-                // Start theselection process
-                delete that._startPointerDown;
-                that._groupSelect = new Set();
-                $(that.element).addClass("multiple-select");
-                //Add the class, but don't add the document as the click document will handle that, but the user needs a visual queue
-                $(`.document[data-document-id="${id}"]`, that.element).addClass("selected");
-            }
-        }, setting("long-press") * 1000);
+        if (!this._groupSelect) {
+            let id = event.currentTarget.closest(".document").dataset.documentId;
+            let that = this;
+            this._startPointerDown = window.setTimeout(() => {
+                if (that._startPointerDown) {
+                    // Start theselection process
+                    delete that._startPointerDown;
+                    that._groupSelect = new Set();
+                    $(that.element).addClass("multiple-select");
+                    //Add the class, but don't add the document as the click document will handle that, but the user needs a visual queue
+                    $(`.document[data-document-id="${id}"]`, that.element).addClass("selected");
+                }
+            }, setting("long-press") * 1000);
+        }
     }
 
     static onMouseUp() {
