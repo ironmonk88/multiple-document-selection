@@ -9,6 +9,8 @@ Long press on a directory item to enter into selection mode.
 Clicking on additional items will add them to the group selection.
 Right click on a selected document will bring up a context menu for group actions.
 
+![multiple-directory-selection](/screenshots/multipleselection.png)
+
 Right clicking on an un-selected entry will cancel the multiple selection.
 And changing to a different sidebar listing will clear the selection.
 
