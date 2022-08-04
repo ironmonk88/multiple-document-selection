@@ -142,7 +142,7 @@ export class MultipleDirectorySelection {
                             menu.condition = function (li) {
                                 if (html.hasClass("multiple-select"))
                                     return false;
-                                return oldCondition(li);
+                                return oldCondition ? oldCondition(li) : true;
                             }
                         }
                     }
