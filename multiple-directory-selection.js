@@ -76,6 +76,7 @@ export class MultipleDirectorySelection {
                         let docData = mergeObject(data, { uuid: document.uuid });
                         this._handleDroppedDocument(target, docData);
                     }
+                    MultipleDirectorySelection.clearTab(this);
                 } else
                     return wrapped(...args);
             } else
@@ -294,7 +295,7 @@ export class MultipleDirectorySelection {
                     });
                     if (ids.length) {
                         documentClass.deleteDocuments(ids);
-                        if (ids.length != tab._groupSelect) {
+                        if (ids.length != tab._groupSelect.size) {
                             ui.notifications.warn("Some of these documents weren't deleted because you do not have permissions to complete the request.");
                             for (let id of ids)
                                 MultipleDirectorySelection.removeDocument(tab, id);
@@ -373,7 +374,7 @@ export class MultipleDirectorySelection {
             if (items.length) {
                 const filename = `fvtt-${collection.documentName}-multiple.json`;
                 saveDataToFile(JSON.stringify(items, null, 2), "text/json", filename);
-                if (ids.length != tab._groupSelect) {
+                if (ids.length != tab._groupSelect.size) {
                     ui.notifications.warn("Some of these documents weren't deleted because you do not have permissions to complete the request.");
                     for (let id of ids)
                         MultipleDirectorySelection.removeDocument(tab, id);

@@ -1,7 +1,7 @@
 {
   "title": "Multiple Directory Selection",
   "description": "Ever wanted to select multiple items in the sidebar directory and move or delete them?",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "authors": [
     {
       "name": "IronMonk",
@@ -25,7 +25,7 @@
     "css/multiple-directory-selection.css"
   ],
   "url": "https://github.com/ironmonk88/multiple-directory-selection",
-  "download": "https://github.com/ironmonk88/multiple-directory-selection/archive/1.0.2.zip",
+  "download": "https://github.com/ironmonk88/multiple-directory-selection/archive/1.0.3.zip",
   "manifest": "https://github.com/ironmonk88/multiple-directory-selection/releases/latest/download/module.json",
   "bugs": "https://github.com/ironmonk88/multiple-directory-selection/issues",
   "allowBugReporter": true,
