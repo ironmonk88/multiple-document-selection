@@ -100,6 +100,52 @@ export class MultipleDocumentSelection {
             }
         }
 
+        let onDragStart = async function (wrapped, ...args) {
+            if (!this._groupSelect?.size && this._startPointerDown) {
+                window.clearTimeout(this._startPointerDown);
+                delete this._startPointerDown;
+            }
+
+            let result = wrapped(...args);
+
+            if (this._groupSelect?.size) {
+                let [event] = args;
+                let data;
+                try {
+                    data = JSON.parse(event.dataTransfer.getData('text/plain'));
+                    if (data.uuid) {
+                        let parts = data.uuid.split(".");
+                        if (parts.length) {
+                            let id = parts[parts.length - 1];
+                            if (!this._groupSelect.has(id)) {
+                                MultipleDocumentSelection.clearTab(this);
+                            }
+                        }
+                    }
+                }
+                catch (err) { }
+            }
+
+            return result;
+        }
+
+        if (game.modules.get("lib-wrapper")?.active) {
+            libWrapper.register("multiple-document-selection", "ActorDirectory.prototype._onDragStart", onDragStart, "WRAPPER");
+            libWrapper.register("multiple-document-selection", "CardsDirectory.prototype._onDragStart", onDragStart, "WRAPPER");
+            libWrapper.register("multiple-document-selection", "ItemDirectory.prototype._onDragStart", onDragStart, "WRAPPER");
+            libWrapper.register("multiple-document-selection", "JournalDirectory.prototype._onDragStart", onDragStart, "WRAPPER");
+            libWrapper.register("multiple-document-selection", "PlaylistDirectory.prototype._onDragStart", onDragStart, "WRAPPER");
+            libWrapper.register("multiple-document-selection", "SceneDirectory.prototype._onDragStart", onDragStart, "WRAPPER");
+            libWrapper.register("multiple-document-selection", "RollTableDirectory.prototype._onDragStart", onDragStart, "WRAPPER");
+        } else {
+            for (let dir of [ActorDirectory, CardsDirectory, ItemDirectory, JournalDirectory, PlaylistDirectory, SceneDirectory, RollTableDirectory]) {
+                const oldDragStart = dir.prototype._onDragStart;
+                dir.prototype._onDragStart = function (event) {
+                    return onDragStart.call(this, oldDragStart.bind(this), ...arguments);
+                }
+            }
+        }
+
         let importFromJSON = async function (wrapped, ...args) {
             let json = args[0];
             let data = JSON.parse(json);
