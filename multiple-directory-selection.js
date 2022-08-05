@@ -2,22 +2,22 @@ import { registerSettings } from "./settings.js";
 import { WithOwnershipConfig } from "./multiple-document-ownership-config.js";
 
 export let debug = (...args) => {
-    if (debugEnabled > 1) console.log("DEBUG: multiple-directory-selection | ", ...args);
+    if (debugEnabled > 1) console.log("DEBUG: multiple-document-selection | ", ...args);
 };
-export let log = (...args) => console.log("multiple-directory-selection | ", ...args);
+export let log = (...args) => console.log("multiple-document-selection | ", ...args);
 export let warn = (...args) => {
-    if (debugEnabled > 0) console.warn("multiple-directory-selection | ", ...args);
+    if (debugEnabled > 0) console.warn("multiple-document-selection | ", ...args);
 };
-export let error = (...args) => console.error("multiple-directory-selection | ", ...args);
+export let error = (...args) => console.error("multiple-document-selection | ", ...args);
 export let i18n = key => {
     return game.i18n.localize(key);
 };
 
 export let setting = key => {
-    return game.settings.get("multiple-directory-selection", key);
+    return game.settings.get("multiple-document-selection", key);
 };
 
-export class MultipleDirectorySelection {
+export class MultipleDocumentSelection {
     static app = null;
 
     static async init() {
@@ -33,23 +33,23 @@ export class MultipleDirectorySelection {
 
                 if (this._groupSelect.has(documentId)) {
                     //remove the document
-                    MultipleDirectorySelection.removeDocument(this, documentId);
+                    MultipleDocumentSelection.removeDocument(this, documentId);
                 } else {
                     //add the document
-                    MultipleDirectorySelection.addDocument(this, documentId);
+                    MultipleDocumentSelection.addDocument(this, documentId);
                 }
             } else
                 return wrapped(...args);
         }
 
         if (game.modules.get("lib-wrapper")?.active) {
-            libWrapper.register("multiple-directory-selection", "ActorDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
-            libWrapper.register("multiple-directory-selection", "CardsDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
-            libWrapper.register("multiple-directory-selection", "ItemDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
-            libWrapper.register("multiple-directory-selection", "JournalDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
-            libWrapper.register("multiple-directory-selection", "PlaylistDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
-            libWrapper.register("multiple-directory-selection", "SceneDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
-            libWrapper.register("multiple-directory-selection", "RollTableDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
+            libWrapper.register("multiple-document-selection", "ActorDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
+            libWrapper.register("multiple-document-selection", "CardsDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
+            libWrapper.register("multiple-document-selection", "ItemDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
+            libWrapper.register("multiple-document-selection", "JournalDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
+            libWrapper.register("multiple-document-selection", "PlaylistDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
+            libWrapper.register("multiple-document-selection", "SceneDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
+            libWrapper.register("multiple-document-selection", "RollTableDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
         } else {
             for (let dir of [ActorDirectory, CardsDirectory, ItemDirectory, JournalDirectory, PlaylistDirectory, SceneDirectory, RollTableDirectory]) {
                 const oldClickDocumentName = dir.prototype._onClickDocumentName;
@@ -76,7 +76,7 @@ export class MultipleDirectorySelection {
                         let docData = mergeObject(data, { uuid: document.uuid });
                         this._handleDroppedDocument(target, docData);
                     }
-                    MultipleDirectorySelection.clearTab(this);
+                    MultipleDocumentSelection.clearTab(this);
                 } else
                     return wrapped(...args);
             } else
@@ -84,13 +84,13 @@ export class MultipleDirectorySelection {
         }
 
         if (game.modules.get("lib-wrapper")?.active) {
-            libWrapper.register("multiple-directory-selection", "ActorDirectory.prototype._onDrop", onDropFolder, "MIXED");
-            libWrapper.register("multiple-directory-selection", "CardsDirectory.prototype._onDrop", onDropFolder, "MIXED");
-            libWrapper.register("multiple-directory-selection", "ItemDirectory.prototype._onDrop", onDropFolder, "MIXED");
-            libWrapper.register("multiple-directory-selection", "JournalDirectory.prototype._onDrop", onDropFolder, "MIXED");
-            libWrapper.register("multiple-directory-selection", "PlaylistDirectory.prototype._onDrop", onDropFolder, "MIXED");
-            libWrapper.register("multiple-directory-selection", "SceneDirectory.prototype._onDrop", onDropFolder, "MIXED");
-            libWrapper.register("multiple-directory-selection", "RollTableDirectory.prototype._onDrop", onDropFolder, "MIXED");
+            libWrapper.register("multiple-document-selection", "ActorDirectory.prototype._onDrop", onDropFolder, "MIXED");
+            libWrapper.register("multiple-document-selection", "CardsDirectory.prototype._onDrop", onDropFolder, "MIXED");
+            libWrapper.register("multiple-document-selection", "ItemDirectory.prototype._onDrop", onDropFolder, "MIXED");
+            libWrapper.register("multiple-document-selection", "JournalDirectory.prototype._onDrop", onDropFolder, "MIXED");
+            libWrapper.register("multiple-document-selection", "PlaylistDirectory.prototype._onDrop", onDropFolder, "MIXED");
+            libWrapper.register("multiple-document-selection", "SceneDirectory.prototype._onDrop", onDropFolder, "MIXED");
+            libWrapper.register("multiple-document-selection", "RollTableDirectory.prototype._onDrop", onDropFolder, "MIXED");
         } else {
             for (let dir of [ActorDirectory, CardsDirectory, ItemDirectory, JournalDirectory, PlaylistDirectory, SceneDirectory, RollTableDirectory]) {
                 const oldOnDrop = dir.prototype._onDrop;
@@ -117,13 +117,13 @@ export class MultipleDirectorySelection {
         }
 
         if (game.modules.get("lib-wrapper")?.active) {
-            libWrapper.register("multiple-directory-selection", "Actor.prototype.importFromJSON", importFromJSON, "MIXED");
-            libWrapper.register("multiple-directory-selection", "Cards.prototype.importFromJSON", importFromJSON, "MIXED");
-            libWrapper.register("multiple-directory-selection", "Item.prototype.importFromJSON", importFromJSON, "MIXED");
-            libWrapper.register("multiple-directory-selection", "JournalEntry.prototype.importFromJSON", importFromJSON, "MIXED");
-            libWrapper.register("multiple-directory-selection", "Playlist.prototype.importFromJSON", importFromJSON, "MIXED");
-            libWrapper.register("multiple-directory-selection", "Scene.prototype.importFromJSON", importFromJSON, "MIXED");
-            libWrapper.register("multiple-directory-selection", "RollTable.prototype.importFromJSON", importFromJSON, "MIXED");
+            libWrapper.register("multiple-document-selection", "Actor.prototype.importFromJSON", importFromJSON, "MIXED");
+            libWrapper.register("multiple-document-selection", "Cards.prototype.importFromJSON", importFromJSON, "MIXED");
+            libWrapper.register("multiple-document-selection", "Item.prototype.importFromJSON", importFromJSON, "MIXED");
+            libWrapper.register("multiple-document-selection", "JournalEntry.prototype.importFromJSON", importFromJSON, "MIXED");
+            libWrapper.register("multiple-document-selection", "Playlist.prototype.importFromJSON", importFromJSON, "MIXED");
+            libWrapper.register("multiple-document-selection", "Scene.prototype.importFromJSON", importFromJSON, "MIXED");
+            libWrapper.register("multiple-document-selection", "RollTable.prototype.importFromJSON", importFromJSON, "MIXED");
         } else {
             for (let entry of [Actor, Cards, Item, JournalEntry, Playlist, Scene, RollTable]) {
                 const oldImportFromJSON = entry.prototype.importFromJSON;
@@ -159,7 +159,7 @@ export class MultipleDirectorySelection {
                         },
                         callback: (li) => {
                             let tab = Object.values(ui.sidebar.tabs).find(t => t.constructor.name == tabName);
-                            MultipleDirectorySelection.deleteDialog(tab);
+                            MultipleDocumentSelection.deleteDialog(tab);
                         }
                     },
                     {
@@ -171,7 +171,7 @@ export class MultipleDirectorySelection {
                         },
                         callback: (li) => {
                             let tab = Object.values(ui.sidebar.tabs).find(t => t.constructor.name == tabName);
-                            MultipleDirectorySelection.duplicateDocuments(tab);
+                            MultipleDocumentSelection.duplicateDocuments(tab);
                         }
                     },
                     {
@@ -183,7 +183,7 @@ export class MultipleDirectorySelection {
                         },
                         callback: (li) => {
                             let tab = Object.values(ui.sidebar.tabs).find(t => t.constructor.name == tabName);
-                            MultipleDirectorySelection.ownershipDialog(tab, li);
+                            MultipleDocumentSelection.ownershipDialog(tab, li);
                         }
                     },
                     {
@@ -195,7 +195,7 @@ export class MultipleDirectorySelection {
                         },
                         callback: (li) => {
                             let tab = Object.values(ui.sidebar.tabs).find(t => t.constructor.name == tabName);
-                            MultipleDirectorySelection.exportDocuments(tab);
+                            MultipleDocumentSelection.exportDocuments(tab);
                         }
                     }
                 );
@@ -240,7 +240,7 @@ export class MultipleDirectorySelection {
                 // carry on but provide a slightly modified context menu
             } else {
                 // cancel the group selection and cancel the context menu
-                MultipleDirectorySelection.clearTab(this);
+                MultipleDocumentSelection.clearTab(this);
                 let closeId = window.setInterval(() => {
                     if (ui.context) {
                         ui.context.menu.hide();
@@ -261,7 +261,7 @@ export class MultipleDirectorySelection {
         dir._groupSelect.delete(id);
         $(`.document[data-document-id="${id}"]`, dir.element).removeClass("selected");
         if (dir._groupSelect.size == 0) {
-            MultipleDirectorySelection.clearTab(dir);
+            MultipleDocumentSelection.clearTab(dir);
         }
     }
 
@@ -276,7 +276,7 @@ export class MultipleDirectorySelection {
 
     static clearAllTabs() {
         for (let dir of Object.values(ui.sidebar.tabs)) {
-            MultipleDirectorySelection.clearTab(dir);
+            MultipleDocumentSelection.clearTab(dir);
         }
     }
 
@@ -287,7 +287,7 @@ export class MultipleDirectorySelection {
             const type = game.i18n.localize(documentClass.metadata.label);
             return Dialog.confirm({
                 title: `${game.i18n.format("DOCUMENT.Delete", { type: `${tab._groupSelect.size} ${type}` })}`,
-                content: `<h4>${game.i18n.localize("AreYouSure")}</h4><p>${game.i18n.format("MultipleDirectorySelection.DeleteWarning", { count: tab._groupSelect.size })}</p>`,
+                content: `<h4>${game.i18n.localize("AreYouSure")}</h4><p>${game.i18n.format("MultipleDocumentSelection.DeleteWarning", { count: tab._groupSelect.size })}</p>`,
                 yes: () => {
                     let ids = Array.from(tab._groupSelect).filter(id => {
                         let document = tab.constructor.collection.get(id);
@@ -298,9 +298,9 @@ export class MultipleDirectorySelection {
                         if (ids.length != tab._groupSelect.size) {
                             ui.notifications.warn("Some of these documents weren't deleted because you do not have permissions to complete the request.");
                             for (let id of ids)
-                                MultipleDirectorySelection.removeDocument(tab, id);
+                                MultipleDocumentSelection.removeDocument(tab, id);
                         } else
-                            MultipleDirectorySelection.clearTab(tab);
+                            MultipleDocumentSelection.clearTab(tab);
                     } else
                         ui.notifications.warn("You do not have permission to delete these documents");
                 }
@@ -330,7 +330,7 @@ export class MultipleDirectorySelection {
             }
             if (items.length) {
                 collection.documentClass.createDocuments(items);
-                MultipleDirectorySelection.clearTab(tab);
+                MultipleDocumentSelection.clearTab(tab);
             }
         }
     }
@@ -377,24 +377,24 @@ export class MultipleDirectorySelection {
                 if (ids.length != tab._groupSelect.size) {
                     ui.notifications.warn("Some of these documents weren't deleted because you do not have permissions to complete the request.");
                     for (let id of ids)
-                        MultipleDirectorySelection.removeDocument(tab, id);
+                        MultipleDocumentSelection.removeDocument(tab, id);
                 } else
-                    MultipleDirectorySelection.clearTab(tab);
+                    MultipleDocumentSelection.clearTab(tab);
             } else
                 ui.notifications.warn("You do not have permission to export these documents");
         }
     }
 }
 
-Hooks.once('init', MultipleDirectorySelection.init);
-Hooks.once('setup', MultipleDirectorySelection.setup);
-Hooks.once('ready', MultipleDirectorySelection.ready);
+Hooks.once('init', MultipleDocumentSelection.init);
+Hooks.once('setup', MultipleDocumentSelection.setup);
+Hooks.once('ready', MultipleDocumentSelection.ready);
 
 Hooks.on("renderSidebarDirectory", (directory, html, options) => {
     $('.document', html)
-        .on("pointerdown", MultipleDirectorySelection.onMouseDown.bind(directory))
-        .on("pointerup", MultipleDirectorySelection.onMouseUp.bind(directory))
-        .on("contextmenu", MultipleDirectorySelection.onContext.bind(directory));
+        .on("pointerdown", MultipleDocumentSelection.onMouseDown.bind(directory))
+        .on("pointerup", MultipleDocumentSelection.onMouseUp.bind(directory))
+        .on("contextmenu", MultipleDocumentSelection.onContext.bind(directory));
 });
 
-Hooks.on("changeSidebarTab", MultipleDirectorySelection.clearAllTabs);
+Hooks.on("changeSidebarTab", MultipleDocumentSelection.clearAllTabs);

@@ -1,4 +1,4 @@
-# Multiple Directory Selection
+# Multiple Document Selection
 Foundry VTT module to allow you to select multiple items on a sidebar.  So you can mass move, export, or delete documents.
 
 ## Installation
@@ -9,7 +9,7 @@ Long press on a directory item to enter into selection mode.
 Clicking on additional items will add them to the group selection.
 Right click on a selected document will bring up a context menu for group actions.
 
-![multiple-directory-selection](/screenshots/multipleselection.png)
+![multiple-document-selection](/screenshots/multipleselection.png)
 
 Right clicking on an un-selected entry will cancel the multiple selection.
 And changing to a different sidebar listing will clear the selection.

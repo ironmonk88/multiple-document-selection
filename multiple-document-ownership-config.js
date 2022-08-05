@@ -1,4 +1,4 @@
-import { MultipleDirectorySelection, log, error, setting, i18n } from './multiple-directory-selection.js';
+import { MultipleDocumentSelection, log, error, setting, i18n } from './multiple-document-selection.js';
 
 export const WithOwnershipConfig = (ConfigClass) => {
     class MultipleDocumentOwnershipConfig extends ConfigClass {

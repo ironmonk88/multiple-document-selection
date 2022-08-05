@@ -1,5 +1,5 @@
 {
-  "title": "Multiple Directory Selection",
+  "title": "Multiple Document Selection",
   "description": "Ever wanted to select multiple items in the sidebar directory and move or delete them?",
   "version": "1.0.3",
   "authors": [
@@ -19,22 +19,22 @@
     }
   ],
   "esmodules": [
-    "multiple-directory-selection.js"
+    "multiple-document-selection.js"
   ],
   "styles": [
-    "css/multiple-directory-selection.css"
+    "css/multiple-document-selection.css"
   ],
-  "url": "https://github.com/ironmonk88/multiple-directory-selection",
-  "download": "https://github.com/ironmonk88/multiple-directory-selection/archive/1.0.3.zip",
-  "manifest": "https://github.com/ironmonk88/multiple-directory-selection/releases/latest/download/module.json",
-  "bugs": "https://github.com/ironmonk88/multiple-directory-selection/issues",
+  "url": "https://github.com/ironmonk88/multiple-document-selection",
+  "download": "https://github.com/ironmonk88/multiple-document-selection/archive/1.0.3.zip",
+  "manifest": "https://github.com/ironmonk88/multiple-document-selection/releases/latest/download/module.json",
+  "bugs": "https://github.com/ironmonk88/multiple-document-selection/issues",
   "allowBugReporter": true,
-  "id": "multiple-directory-selection",
+  "id": "multiple-document-selection",
   "compatibility": {
     "minimum": "9",
     "verified": "10"
   },
-  "name": "multiple-directory-selection",
+  "name": "multiple-document-selection",
   "minimumCoreVersion": "9",
   "compatibleCoreVersion": "10"
 }
