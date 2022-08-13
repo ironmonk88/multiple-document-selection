@@ -23,6 +23,10 @@ export class MultipleDocumentSelection {
     static async init() {
         log("initializing");
 
+        if (game.modules.get("lib-wrapper")?.active) {
+            libWrapper.ignore_conflicts("multiple-document-selection", "monks-scene-navigation", "SceneDirectory.prototype._onClickDocumentName");
+        }
+
         registerSettings();
 
         let clickDocumentName = async function (wrapped, ...args) {
@@ -36,6 +40,24 @@ export class MultipleDocumentSelection {
                     MultipleDocumentSelection.removeDocument(this, documentId);
                 } else {
                     //add the document
+                    if (event.shiftKey && MultipleDocumentSelection._lastId) {
+                        let elem1 = $(`.document[data-document-id="${documentId}"]`, this.element);
+                        let elem2 = $(`.document[data-document-id="${MultipleDocumentSelection._lastId}"]`, elem1.parent());
+
+                        if (elem2.length) {
+                            if (elem2.index() < elem1.index()) {
+                                let temp = elem2;
+                                elem2 = elem1;
+                                elem1 = temp;
+                            }
+                            let elements = elem1.nextUntil(elem2, 'li');
+
+                            for (let elem of elements) {
+                                MultipleDocumentSelection.addDocument(this, elem.dataset.documentId);
+                            }
+                        }
+
+                    }
                     MultipleDocumentSelection.addDocument(this, documentId);
                 }
             } else
@@ -47,7 +69,6 @@ export class MultipleDocumentSelection {
             libWrapper.register("multiple-document-selection", "CardsDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
             libWrapper.register("multiple-document-selection", "ItemDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
             libWrapper.register("multiple-document-selection", "JournalDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
-            libWrapper.register("multiple-document-selection", "PlaylistDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
             libWrapper.register("multiple-document-selection", "SceneDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
             libWrapper.register("multiple-document-selection", "RollTableDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
         } else {
@@ -70,11 +91,28 @@ export class MultipleDocumentSelection {
                 const target = event.target.closest(".directory-item") || null;
 
                 // Call the drop handler
-                if (data.type == cls) {
+                if (data.type == cls || (cls == "Playlist" && data.type == "PlaylistSound")) {
                     for (let id of this._groupSelect) {
-                        let document = this.constructor.collection.get(id);
-                        let docData = mergeObject(data, { uuid: document.uuid });
-                        this._handleDroppedDocument(target, docData);
+                        if (data.type == "PlaylistSound") {
+                            const li = $(`.sound[data-sound-id="${id}"]`, this.element);
+                            const playlistId = li.parents(".playlist").data("document-id");
+                            const playlist = game.playlists.get(playlistId);
+                            const sound = playlist.sounds.get(id);
+                            let docData = mergeObject(data, { uuid: sound.uuid });
+
+                            let dragEvent = {
+                                target: event.target,
+                                dataTransfer: new DataTransfer(),
+                                type: event.type
+                            };
+                            dragEvent.dataTransfer.setData("text/plain", JSON.stringify(docData));
+
+                            wrapped(dragEvent);
+                        } else {
+                            let document = this.constructor.collection.get(id);
+                            let docData = mergeObject(data, { uuid: document.uuid });
+                            this._handleDroppedDocument(target, docData);
+                        }
                     }
                     MultipleDocumentSelection.clearTab(this);
                 } else
@@ -179,7 +217,7 @@ export class MultipleDocumentSelection {
             }
         }
 
-        for (let tabName of ["ActorDirectory", "CardsDirectory", "ItemDirectory", "JournalDirectory", "playlPlaylistDirectoryists", "SceneDirectory", "RollTableDirectory"]) {
+        for (let tabName of ["ActorDirectory", "CardsDirectory", "ItemDirectory", "JournalDirectory", "SceneDirectory", "RollTableDirectory"]) {
             Hooks.on(`get${tabName}EntryContext`, (html, menuItems) => {
                 window.setTimeout(() => {
                     // make sure we're the last one to activate
@@ -247,6 +285,80 @@ export class MultipleDocumentSelection {
                 );
             })
         }
+
+        Hooks.on(`getPlaylistDirectorySoundContext`, (html, menuItems) => {
+            window.setTimeout(() => {
+                // make sure we're the last one to activate
+                for (let menu of menuItems) {
+                    if (!menu.multiple) {
+                        let oldCondition = menu.condition;
+                        menu.condition = function (li) {
+                            if (html.hasClass("multiple-select"))
+                                return false;
+                            return oldCondition ? oldCondition(li) : true;
+                        }
+                    }
+                }
+            }, 500);
+
+            menuItems.push(
+                {
+                    icon: '<i class="fas fa-trash"></i>',
+                    name: "Delete Multiple",
+                    multiple: true,
+                    condition: (li) => {
+                        return game.user.isGM && html.hasClass("multiple-select") && li.hasClass('selected');
+                    },
+                    callback: (li) => {
+                        MultipleDocumentSelection.deleteDialog(ui.sidebar.tabs.playlists);
+                    }
+                },
+                {
+                    icon: '<i class="fas fa-lock"></i>',
+                    name: "Preload Sounds",
+                    multiple: true,
+                    condition: (li) => {
+                        return game.user.isGM && html.hasClass("multiple-select") && li.hasClass('selected');
+                    },
+                    callback: (li) => {
+                        MultipleDocumentSelection.preloadSounds(ui.sidebar.tabs.playlists);
+                    }
+                }
+            );
+        });
+    }
+
+    static selectPlaylistSound(event) {
+        const soundId = event.currentTarget.dataset.soundId;
+        let tab = ui.sidebar.tabs.playlists;
+
+        if (tab._groupSelect || tab._startPointerDown) {
+            if (tab._groupSelect.has(soundId)) {
+                //remove the document
+                MultipleDocumentSelection.removeDocument(tab, soundId);
+            } else {
+                //add the document
+                if (event.shiftKey && MultipleDocumentSelection._lastId) {
+                    let elem1 = $(`.sound[data-sound-id="${soundId}"]`, ui.sidebar.tabs.playlists.element);
+                    let elem2 = $(`.sound[data-sound-id="${MultipleDocumentSelection._lastId}"]`, elem1.parent());
+
+                    if (elem2.length) {
+                        if (elem2.index() < elem1.index()) {
+                            let temp = elem2;
+                            elem2 = elem1;
+                            elem1 = temp;
+                        }
+                        let elements = elem1.nextUntil(elem2, 'li');
+
+                        for (let elem of elements) {
+                            MultipleDocumentSelection.addDocument(tab, elem.dataset.soundId);
+                        }
+                    }
+
+                }
+                MultipleDocumentSelection.addDocument(tab, soundId);
+            }
+        }
     }
 
     static async setup() {
@@ -257,7 +369,7 @@ export class MultipleDocumentSelection {
 
     static onMouseDown(event) {
         if (!this._groupSelect) {
-            let id = event.currentTarget.closest(".document").dataset.documentId;
+            let id = (this instanceof PlaylistDirectory ? event.currentTarget.closest(".sound").dataset.soundId : event.currentTarget.closest(".document").dataset.documentId);
             let that = this;
             this._startPointerDown = window.setTimeout(() => {
                 if (that._startPointerDown) {
@@ -266,13 +378,15 @@ export class MultipleDocumentSelection {
                     that._groupSelect = new Set();
                     $(that.element).addClass("multiple-select");
                     //Add the class, but don't add the document as the click document will handle that, but the user needs a visual queue
-                    $(`.document[data-document-id="${id}"]`, that.element).addClass("selected");
+                    $(`.document[data-document-id="${id}"],.sound[data-sound-id="${id}"]`, that.element).addClass("selected");
                 }
             }, setting("long-press") * 1000);
         }
     }
 
-    static onMouseUp() {
+    static onMouseUp(event) {
+        event.preventDefault();
+        event.stopPropagation();
         if (this._startPointerDown) {
             window.clearTimeout(this._startPointerDown);
             delete this._startPointerDown;
@@ -281,7 +395,7 @@ export class MultipleDocumentSelection {
 
     static onContext(event) {
         if (this._groupSelect) {
-            let id = event.currentTarget.closest(".document").dataset.documentId;
+            let id = (this instanceof PlaylistDirectory ? event.currentTarget.closest(".sound").dataset.soundId : event.currentTarget.closest(".document").dataset.documentId);
             if (this._groupSelect.has(id)) {
                 // carry on but provide a slightly modified context menu
             } else {
@@ -299,13 +413,16 @@ export class MultipleDocumentSelection {
     }
 
     static addDocument(dir, id) {
+        MultipleDocumentSelection._lastId = id;
         dir._groupSelect.add(id);
-        $(`.document[data-document-id="${id}"]`, dir.element).addClass("selected");
+        $(`.document[data-document-id="${id}"],.sound[data-sound-id="${id}"]`, dir.element).addClass("selected");
     }
 
     static removeDocument(dir, id) {
+        if (MultipleDocumentSelection._lastId == id)
+            delete MultipleDocumentSelection._lastId;
         dir._groupSelect.delete(id);
-        $(`.document[data-document-id="${id}"]`, dir.element).removeClass("selected");
+        $(`.document[data-document-id="${id}"],.sound[data-sound-id="${id}"]`, dir.element).removeClass("selected");
         if (dir._groupSelect.size == 0) {
             MultipleDocumentSelection.clearTab(dir);
         }
@@ -315,9 +432,10 @@ export class MultipleDocumentSelection {
         if (dir._groupSelect) {
             delete dir._groupSelect;
             delete dir._startPointerDown;
-            $('.document.selected', dir.element).removeClass("selected");
+            $('.document.selected,.sound.selected', dir.element).removeClass("selected");
             $(dir.element).removeClass("multiple-select");
         }
+        delete MultipleDocumentSelection._lastId;
     }
 
     static clearAllTabs() {
@@ -329,18 +447,35 @@ export class MultipleDocumentSelection {
     static deleteDialog(tab) {
         if (tab) {
             //show the delete dialog for multiple entries
-            const documentClass = tab.constructor.collection.documentClass;
+            const documentClass = (tab instanceof PlaylistDirectory ? PlaylistSound : tab.constructor.collection.documentClass);
             const type = game.i18n.localize(documentClass.metadata.label);
             return Dialog.confirm({
                 title: `${game.i18n.format("DOCUMENT.Delete", { type: `${tab._groupSelect.size} ${type}` })}`,
                 content: `<h4>${game.i18n.localize("AreYouSure")}</h4><p>${game.i18n.format("MultipleDocumentSelection.DeleteWarning", { count: tab._groupSelect.size })}</p>`,
                 yes: () => {
                     let ids = Array.from(tab._groupSelect).filter(id => {
+                        if (tab instanceof PlaylistDirectory)
+                            return true;
                         let document = tab.constructor.collection.get(id);
                         return document && document.canUserModify(game.user, "delete")
                     });
                     if (ids.length) {
-                        documentClass.deleteDocuments(ids);
+                        if (tab instanceof PlaylistDirectory) {
+                            let parents = {};
+                            for (let id of ids) {
+                                const li = $(`.sound[data-sound-id="${id}"]`, tab.element);
+                                const playlistId = li.parents(".playlist").data("document-id");
+                                if (!parents[playlistId])
+                                    parents[playlistId] = [];
+                                parents[playlistId].push(id);
+                            }
+                            for (let [playlistId, pids] of Object.entries(parents)) {
+                                const playlist = game.playlists.get(playlistId);
+                                documentClass.deleteDocuments(pids, { parent: playlist });
+                            }
+                        } else
+                            documentClass.deleteDocuments(ids);
+
                         if (ids.length != tab._groupSelect.size) {
                             ui.notifications.warn("Some of these documents weren't deleted because you do not have permissions to complete the request.");
                             for (let id of ids)
@@ -430,6 +565,20 @@ export class MultipleDocumentSelection {
                 ui.notifications.warn("You do not have permission to export these documents");
         }
     }
+
+    static preloadSounds(tab) {
+        if (tab) {
+            for (let id of tab._groupSelect) {
+                //find the actual sounds
+                const li = $(`.sound[data-sound-id="${id}"]`, tab.element);
+                const playlistId = li.parents(".playlist").data("document-id");
+                const playlist = game.playlists.get(playlistId);
+                const sound = playlist.sounds.get(id);
+                game.audio.preload(sound.path);
+            }
+            MultipleDocumentSelection.clearTab(tab);
+        }
+    }
 }
 
 Hooks.once('init', MultipleDocumentSelection.init);
@@ -437,10 +586,15 @@ Hooks.once('setup', MultipleDocumentSelection.setup);
 Hooks.once('ready', MultipleDocumentSelection.ready);
 
 Hooks.on("renderSidebarDirectory", (directory, html, options) => {
-    $('.document', html)
+    $((directory instanceof PlaylistDirectory ? '.sound' : '.document'), html)
         .on("pointerdown", MultipleDocumentSelection.onMouseDown.bind(directory))
         .on("pointerup", MultipleDocumentSelection.onMouseUp.bind(directory))
         .on("contextmenu", MultipleDocumentSelection.onContext.bind(directory));
+    $('.directory-list', html).on('pointerup', MultipleDocumentSelection.clearTab.bind(directory, directory))
+});
+
+Hooks.on("renderPlaylistDirectory", (app, html, user) => {
+    $('li.sound', html).click(MultipleDocumentSelection.selectPlaylistSound.bind(this));
 });
 
 Hooks.on("changeSidebarTab", MultipleDocumentSelection.clearAllTabs);
