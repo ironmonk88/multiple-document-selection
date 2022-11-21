@@ -125,11 +125,11 @@ export class MultipleDocumentSelection {
                             };
                             dragEvent.dataTransfer.setData("text/plain", JSON.stringify(docData));
 
-                            wrapped(dragEvent);
+                            await wrapped(dragEvent);
                         } else {
                             let document = this.constructor.collection.get(id);
                             let docData = mergeObject(data, { uuid: document.uuid });
-                            this._handleDroppedDocument(target, docData);
+                            await this._handleDroppedDocument(target, docData);
                         }
                     }
                     MultipleDocumentSelection.clearTab(this);
