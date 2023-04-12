@@ -1,3 +1,11 @@
+## Version 10.3
+
+Fixed issue when moving multiple documents.
+
+Prevent drag and drop with the volume sliders
+
+Fixed issue when opening folders
+
 ## Version 10.2
 
 Added styling specific for DSA/TDE system

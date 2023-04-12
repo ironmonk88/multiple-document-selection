@@ -129,6 +129,7 @@ export class MultipleDocumentSelection {
                         } else {
                             let document = this.constructor.collection.get(id);
                             let docData = mergeObject(data, { uuid: document.uuid });
+                            if (docData.type == "Tile") delete docData.data;
                             await this._handleDroppedDocument(target, docData);
                         }
                     }
@@ -421,6 +422,8 @@ export class MultipleDocumentSelection {
         let id = (this instanceof PlaylistDirectory ? event.currentTarget.closest(".sound").dataset.soundId : event.currentTarget.closest(".document").dataset.documentId);
         if (!this._groupSelect) {
             let that = this;
+            if ($(event.originalEvent.target).hasClass("global-volume-slider"))
+                return;
             this._startPointerDown = window.setTimeout(() => {
                 if (that._startPointerDown) {
                     // Start theselection process
@@ -654,7 +657,7 @@ Hooks.on("renderSidebarDirectory", (directory, html, options) => {
         .on("contextmenu", MultipleDocumentSelection.onContext.bind(directory));
     $('.directory-list', html).on('pointerup', (event) => {
         //ignore if I clicked on a directory
-        if ($(event.originalEvent.path[0]).hasClass("directory-list"))
+        if (event.originalEvent.path && event.originalEvent.path.length && $(event.originalEvent.path[0]).hasClass("directory-list"))
             MultipleDocumentSelection.clearTab.call(directory, directory);
     })
 });
