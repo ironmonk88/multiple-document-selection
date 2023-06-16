@@ -24,7 +24,8 @@ export class MultipleDocumentSelection {
         log("initializing");
 
         if (game.modules.get("lib-wrapper")?.active) {
-            libWrapper.ignore_conflicts("multiple-document-selection", "monks-scene-navigation", "SceneDirectory.prototype._onClickDocumentName");
+            libWrapper.ignore_conflicts("multiple-document-selection", "monks-scene-navigation", "SceneDirectory.prototype._onClickEntryName");
+            libWrapper.ignore_conflicts("multiple-document-selection", "monks-common-display", "ActorDirectory.prototype._onClickEntryName");
         }
 
         registerSettings();
@@ -32,7 +33,7 @@ export class MultipleDocumentSelection {
         let additionalDirectories = [];
         Hooks.callAll("MultipleDocumentSelection.ready", additionalDirectories);
 
-        let clickDocumentName = async function (wrapped, ...args) {
+        let clickEntryName = async function (wrapped, ...args) {
             let event = args[0];
             if (event.ctrlKey && !this._groupSelect) {
                 delete this._startPointerDown;
@@ -74,26 +75,26 @@ export class MultipleDocumentSelection {
         }
 
         if (game.modules.get("lib-wrapper")?.active) {
-            libWrapper.register("multiple-document-selection", "ActorDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
-            libWrapper.register("multiple-document-selection", "CardsDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
-            libWrapper.register("multiple-document-selection", "ItemDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
-            libWrapper.register("multiple-document-selection", "JournalDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
-            libWrapper.register("multiple-document-selection", "SceneDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
-            libWrapper.register("multiple-document-selection", "RollTableDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
-            libWrapper.register("multiple-document-selection", "MacroDirectory.prototype._onClickDocumentName", clickDocumentName, "MIXED");
+            libWrapper.register("multiple-document-selection", "ActorDirectory.prototype._onClickEntryName", clickEntryName, "MIXED");
+            libWrapper.register("multiple-document-selection", "CardsDirectory.prototype._onClickEntryName", clickEntryName, "MIXED");
+            libWrapper.register("multiple-document-selection", "ItemDirectory.prototype._onClickEntryName", clickEntryName, "MIXED");
+            libWrapper.register("multiple-document-selection", "JournalDirectory.prototype._onClickEntryName", clickEntryName, "MIXED");
+            libWrapper.register("multiple-document-selection", "SceneDirectory.prototype._onClickEntryName", clickEntryName, "MIXED");
+            libWrapper.register("multiple-document-selection", "RollTableDirectory.prototype._onClickEntryName", clickEntryName, "MIXED");
+            libWrapper.register("multiple-document-selection", "MacroDirectory.prototype._onClickEntryName", clickEntryName, "MIXED");
         } else {
-            let directories = [ActorDirectory, CardsDirectory, ItemDirectory, JournalDirectory, PlaylistDirectory, SceneDirectory, RollTableDirectory, MacroDirectory];
+            let directories = [ActorDirectory, CardsDirectory, ItemDirectory, JournalDirectory, SceneDirectory, RollTableDirectory, MacroDirectory];
             for (let dir of directories) {
-                const oldClickDocumentName = dir.prototype._onClickDocumentName;
-                dir.prototype._onClickDocumentName = function (event) {
-                    return clickDocumentName.call(this, oldClickDocumentName.bind(this), ...arguments);
+                const oldClickEntryName = dir.prototype._onClickEntryName;
+                dir.prototype._onClickEntryName = function (event) {
+                    return clickEntryName.call(this, oldClickEntryName.bind(this), ...arguments);
                 }
             }
         }
         for (let dir of additionalDirectories) {
-            const oldClickDocumentName = dir.prototype._onClickDocumentName;
-            dir.prototype._onClickDocumentName = function (event) {
-                return clickDocumentName.call(this, oldClickDocumentName.bind(this), ...arguments);
+            const oldClickEntryName = dir.prototype._onClickEntryName;
+            dir.prototype._onClickEntryName = function (event) {
+                return clickEntryName.call(this, oldClickEntryName.bind(this), ...arguments);
             }
         }
         
@@ -424,16 +425,23 @@ export class MultipleDocumentSelection {
             let that = this;
             if ($(event.originalEvent.target).hasClass("global-volume-slider"))
                 return;
-            this._startPointerDown = window.setTimeout(() => {
-                if (that._startPointerDown) {
-                    // Start theselection process
-                    delete that._startPointerDown;
-                    that._groupSelect = new Set();
-                    $(that.popOut ? $('.window-content .sidebar-tab', that.element) : that.element).addClass("multiple-select");
-                    //Add the class, but don't add the document as the click document will handle that, but the user needs a visual queue
-                    $(`.document[data-document-id="${id}"],.sound[data-sound-id="${id}"]`, that.element).addClass("selected");
-                }
-            }, setting("long-press") * 1000);
+
+            if (event.ctrlKey) {
+                delete this._startPointerDown;
+                this._groupSelect = new Set();
+                $(this.popOut ? $('.window-content .sidebar-tab', this.element) : this.element).addClass("multiple-select");
+            } else {
+                this._startPointerDown = window.setTimeout(() => {
+                    if (that._startPointerDown) {
+                        // Start thes election process
+                        delete that._startPointerDown;
+                        that._groupSelect = new Set();
+                        $(that.popOut ? $('.window-content .sidebar-tab', that.element) : that.element).addClass("multiple-select");
+                        //Add the class, but don't add the document as the click document will handle that, but the user needs a visual queue
+                        $(`.document[data-document-id="${id}"],.sound[data-sound-id="${id}"]`, that.element).addClass("selected");
+                    }
+                }, setting("long-press") * 1000);
+            }
         } else {
             // let's fake the item being selected
             $(`.document[data-document-id="${id}"],.sound[data-sound-id="${id}"]`, this.element).addClass("selected");
@@ -650,11 +658,12 @@ Hooks.once('init', MultipleDocumentSelection.init);
 Hooks.once('setup', MultipleDocumentSelection.setup);
 Hooks.once('ready', MultipleDocumentSelection.ready);
 
-Hooks.on("renderSidebarDirectory", (directory, html, options) => {
+Hooks.on("renderDocumentDirectory", (directory, html, options) => {
     $((directory instanceof PlaylistDirectory ? '.sound' : '.document'), html)
         .on("pointerdown", MultipleDocumentSelection.onMouseDown.bind(directory))
         .on("pointerup", MultipleDocumentSelection.onMouseUp.bind(directory))
         .on("contextmenu", MultipleDocumentSelection.onContext.bind(directory));
+
     $('.directory-list', html).on('pointerup', (event) => {
         //ignore if I clicked on a directory
         if (event.originalEvent.path && event.originalEvent.path.length && $(event.originalEvent.path[0]).hasClass("directory-list"))
@@ -663,7 +672,26 @@ Hooks.on("renderSidebarDirectory", (directory, html, options) => {
 });
 
 Hooks.on("renderPlaylistDirectory", (app, html, user) => {
-    $('li.sound', html).click(MultipleDocumentSelection.selectPlaylistSound.bind(this));
+    $('li.sound', html).bindFirst("click", MultipleDocumentSelection.selectPlaylistSound.bind(this));
 });
 
 Hooks.on("changeSidebarTab", MultipleDocumentSelection.clearAllTabs);
+
+Hooks.on("renderSceneDirectory", (app, html, options) => {
+    $(".document.scene h3.document-name:not(.entry-name)", html).addClass("entry-name");
+});
+
+Hooks.on("clickPlaylistSound", (sound) => {
+    let directory = ui.sidebar.tabs["playlists"];
+    return !(directory._startPointerDown || directory._groupSelect);
+});
+
+$.fn.bindFirst = function (name, fn) {
+    var elem, handlers, i, _len;
+    this.bind(name, fn);
+    for (i = 0, _len = this.length; i < _len; i++) {
+        elem = this[i];
+        handlers = jQuery._data(elem).events[name.split('.')[0]];
+        handlers.unshift(handlers.pop());
+    }
+};

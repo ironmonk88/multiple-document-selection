@@ -1,3 +1,13 @@
+## Version 11.01
+
+Adding support for v11
+
+Fixing issues with interactions with the playlist directory.
+
+Fixing an issue with Foundry not allowing scenes to be selected.
+
+**Note this release needs the 11.03 update from Sound Enhancements to work properly if you have Sound Enhancements installed**
+
 ## Version 10.3
 
 Fixed issue when moving multiple documents.
