@@ -19,6 +19,7 @@ export let setting = key => {
 
 export class MultipleDocumentSelection {
     static app = null;
+    static compendiums = [];
 
     static async init() {
         log("initializing");
@@ -38,7 +39,10 @@ export class MultipleDocumentSelection {
             if (event.ctrlKey && !this._groupSelect) {
                 delete this._startPointerDown;
                 this._groupSelect = new Set();
-                $(this.popOut ? $('.window-content .sidebar-tab', this.element) : this.element).addClass("multiple-select");
+                if (this instanceof Compendium) {
+                    MultipleDocumentSelection.compendiums.push(this);
+                }
+                $(this.popOut ? $('.sidebar-tab,.compendium.directory', this.element) : this.element).addClass("multiple-select");
             }
 
             if (this._groupSelect || this._startPointerDown) {
@@ -82,8 +86,9 @@ export class MultipleDocumentSelection {
             libWrapper.register("multiple-document-selection", "SceneDirectory.prototype._onClickEntryName", clickEntryName, "MIXED");
             libWrapper.register("multiple-document-selection", "RollTableDirectory.prototype._onClickEntryName", clickEntryName, "MIXED");
             libWrapper.register("multiple-document-selection", "MacroDirectory.prototype._onClickEntryName", clickEntryName, "MIXED");
+            libWrapper.register("multiple-document-selection", "Compendium.prototype._onClickEntryName", clickEntryName, "MIXED");
         } else {
-            let directories = [ActorDirectory, CardsDirectory, ItemDirectory, JournalDirectory, SceneDirectory, RollTableDirectory, MacroDirectory];
+            let directories = [ActorDirectory, CardsDirectory, ItemDirectory, JournalDirectory, SceneDirectory, RollTableDirectory, MacroDirectory, Compendium];
             for (let dir of directories) {
                 const oldClickEntryName = dir.prototype._onClickEntryName;
                 dir.prototype._onClickEntryName = function (event) {
@@ -100,6 +105,8 @@ export class MultipleDocumentSelection {
         
 
         let onDropFolder = async function (wrapped, ...args) {
+            const data = TextEditor.getDragEventData(event);
+
             if (this._groupSelect) {
                 let event = args[0];
                 event.preventDefault();
@@ -137,6 +144,19 @@ export class MultipleDocumentSelection {
                     MultipleDocumentSelection.clearTab(this);
                 } else
                     return wrapped(...args);
+            } else if (data.groupSelect) {
+                // Dropping multiple files here
+                let groupSelect = duplicate(data.groupSelect);
+                delete data.groupSelect;
+                let uuid = data.uuid.substr(0, data.uuid.length - 16);
+                const target = event.target.closest(".directory-item") || null;
+                for (let groupFile of groupSelect) {
+                    let dropData = {
+                        type: data.type,
+                        uuid : `${uuid}${groupFile}`
+                    }
+                    this._handleDroppedEntry(target, dropData);
+                }
             } else
                 return wrapped(...args);
         }
@@ -150,8 +170,9 @@ export class MultipleDocumentSelection {
             libWrapper.register("multiple-document-selection", "SceneDirectory.prototype._onDrop", onDropFolder, "MIXED");
             libWrapper.register("multiple-document-selection", "RollTableDirectory.prototype._onDrop", onDropFolder, "MIXED");
             libWrapper.register("multiple-document-selection", "MacroDirectory.prototype._onDrop", onDropFolder, "MIXED");
+            libWrapper.register("multiple-document-selection", "Compendium.prototype._onDrop", onDropFolder, "MIXED");
         } else {
-            for (let dir of [ActorDirectory, CardsDirectory, ItemDirectory, JournalDirectory, PlaylistDirectory, SceneDirectory, RollTableDirectory, MacroDirectory]) {
+            for (let dir of [ActorDirectory, CardsDirectory, ItemDirectory, JournalDirectory, PlaylistDirectory, SceneDirectory, RollTableDirectory, MacroDirectory, Compendium]) {
                 const oldOnDrop = dir.prototype._onDrop;
                 dir.prototype._onDrop = function (event) {
                     return onDropFolder.call(this, oldOnDrop.bind(this), ...arguments);
@@ -178,6 +199,10 @@ export class MultipleDocumentSelection {
                 let data;
                 try {
                     data = JSON.parse(event.dataTransfer.getData('text/plain'));
+
+                    data.groupSelect = Array.from(this._groupSelect);
+                    event.dataTransfer.setData("text/plain", JSON.stringify(data));
+
                     if (data.uuid) {
                         let parts = data.uuid.split(".");
                         if (parts.length) {
@@ -203,8 +228,9 @@ export class MultipleDocumentSelection {
             libWrapper.register("multiple-document-selection", "SceneDirectory.prototype._onDragStart", onDragStart, "WRAPPER");
             libWrapper.register("multiple-document-selection", "RollTableDirectory.prototype._onDragStart", onDragStart, "WRAPPER");
             libWrapper.register("multiple-document-selection", "MacroDirectory.prototype._onDragStart", onDragStart, "WRAPPER");
+            libWrapper.register("multiple-document-selection", "Compendium.prototype._onDragStart", onDragStart, "WRAPPER");
         } else {
-            for (let dir of [ActorDirectory, CardsDirectory, ItemDirectory, JournalDirectory, PlaylistDirectory, SceneDirectory, RollTableDirectory, MacroDirectory]) {
+            for (let dir of [ActorDirectory, CardsDirectory, ItemDirectory, JournalDirectory, PlaylistDirectory, SceneDirectory, RollTableDirectory, MacroDirectory, Compendium]) {
                 const oldDragStart = dir.prototype._onDragStart;
                 dir.prototype._onDragStart = function (event) {
                     return onDragStart.call(this, oldDragStart.bind(this), ...arguments);
@@ -298,7 +324,8 @@ export class MultipleDocumentSelection {
                         name: "Configure Ownership",
                         multiple: true,
                         condition: (li) => {
-                            return game.user.isGM && html.hasClass("multiple-select") && li.hasClass('selected');
+                            let entry = [...tab.collection][0];
+                            return game.user.isGM && html.hasClass("multiple-select") && li.hasClass('selected') && entry?.ownership;
                         },
                         callback: (li) => {
                             //let tab = Object.values(ui.sidebar.tabs).find(t => t.constructor.name == tabName);
@@ -310,7 +337,7 @@ export class MultipleDocumentSelection {
                         name: "Export Data",
                         multiple: true,
                         condition: (li) => {
-                            return html.hasClass("multiple-select") && li.hasClass('selected');
+                            return html.hasClass("multiple-select") && li.hasClass('selected') && game.system.id !== "pf2e";
                         },
                         callback: (li) => {
                             //let tab = Object.values(ui.sidebar.tabs).find(t => t.constructor.name == tabName);
@@ -320,6 +347,39 @@ export class MultipleDocumentSelection {
                 );
             })
         }
+
+        Hooks.on("getCompendiumEntryContext", (html, menuItems) => {
+            window.setTimeout(() => {
+                // make sure we're the last one to activate
+                for (let menu of menuItems) {
+                    if (!menu.multiple) {
+                        let oldCondition = menu.condition;
+                        menu.condition = function (li) {
+                            if (html.hasClass("multiple-select"))
+                                return false;
+                            return oldCondition ? oldCondition(li) : true;
+                        }
+                    }
+                }
+            }, 500);
+
+            menuItems.push(
+                {
+                    icon: '<i class="fas fa-trash"></i>',
+                    name: "Delete Multiple",
+                    multiple: true,
+                    condition: (li) => {
+                        return game.user.isGM && html.hasClass("multiple-select") && li.hasClass('selected');
+                    },
+                    callback: (li) => {
+                        let compendium = $(li).closest(".Compendium-sidebar");
+                        let id = compendium.attr("id");
+                        let tab = MultipleDocumentSelection.compendiums.find(c => c.id === id);
+                        MultipleDocumentSelection.deleteDialog(tab);
+                    }
+                }
+            );
+        })
 
         Hooks.on(`getPlaylistDirectorySoundContext`, (html, menuItems) => {
             window.setTimeout(() => {
@@ -429,14 +489,20 @@ export class MultipleDocumentSelection {
             if (event.ctrlKey) {
                 delete this._startPointerDown;
                 this._groupSelect = new Set();
-                $(this.popOut ? $('.window-content .sidebar-tab', this.element) : this.element).addClass("multiple-select");
+                if (this instanceof Compendium) {
+                    MultipleDocumentSelection.compendiums.push(this);
+                }
+                $(this.popOut ? $('.sidebar-tab,.compendium.directory', this.element) : this.element).addClass("multiple-select");
             } else {
                 this._startPointerDown = window.setTimeout(() => {
                     if (that._startPointerDown) {
                         // Start thes election process
                         delete that._startPointerDown;
                         that._groupSelect = new Set();
-                        $(that.popOut ? $('.window-content .sidebar-tab', that.element) : that.element).addClass("multiple-select");
+                        if (that instanceof Compendium) {
+                            MultipleDocumentSelection.compendiums.push(that);
+                        }
+                        $(that.popOut ? $('.sidebar-tab,.compendium.directory', that.element) : that.element).addClass("multiple-select");
                         //Add the class, but don't add the document as the click document will handle that, but the user needs a visual queue
                         $(`.document[data-document-id="${id}"],.sound[data-sound-id="${id}"]`, that.element).addClass("selected");
                     }
@@ -497,13 +563,19 @@ export class MultipleDocumentSelection {
             delete dir._groupSelect;
             delete dir._startPointerDown;
             $('.document.selected,.sound.selected', dir.element).removeClass("selected");
-            $(dir.element).removeClass("multiple-select");
+            if (dir.popOut)
+                $(".sidebar-tab,.compendium.directory", dir.element).removeClass("multiple-select");
+            else
+                $(dir.element).removeClass("multiple-select");
         }
         delete MultipleDocumentSelection._lastId;
+        if (dir instanceof Compendium) {
+            MultipleDocumentSelection.compendiums.findSplice(c => c.id == dir.id);
+        }
     }
 
     static clearAllTabs() {
-        for (let dir of Object.values(ui.sidebar.tabs)) {
+        for (let dir of MultipleDocumentSelection.compendiums.concat(Object.values(ui.sidebar.tabs))) {
             MultipleDocumentSelection.clearTab(dir);
         }
     }
@@ -511,16 +583,18 @@ export class MultipleDocumentSelection {
     static deleteDialog(tab) {
         if (tab) {
             //show the delete dialog for multiple entries
-            const documentClass = (tab instanceof PlaylistDirectory ? PlaylistSound : tab.constructor.collection.documentClass);
+            const documentClass = (tab instanceof PlaylistDirectory ? PlaylistSound : tab.constructor.collection?.documentClass || tab.collection?.documentClass);
             const type = game.i18n.localize(documentClass.metadata.label);
             return Dialog.confirm({
                 title: `${game.i18n.format("DOCUMENT.Delete", { type: `${tab._groupSelect.size} ${type}` })}`,
                 content: `<h4>${game.i18n.localize("AreYouSure")}</h4><p>${game.i18n.format("MultipleDocumentSelection.DeleteWarning", { count: tab._groupSelect.size })}</p>`,
-                yes: () => {
+                yes: async () => {
                     let ids = Array.from(tab._groupSelect).filter(id => {
                         if (tab instanceof PlaylistDirectory)
                             return true;
-                        let document = tab.constructor.collection.get(id);
+                        if (tab instanceof Compendium)
+                            return !tab.collection.locked;
+                        let document = tab.constructor?.collection?.get(id) || tab.collection?.get(id);
                         return document && document.canUserModify(game.user, "delete")
                     });
                     if (ids.length) {
@@ -537,8 +611,16 @@ export class MultipleDocumentSelection {
                                 const playlist = game.playlists.get(playlistId);
                                 documentClass.deleteDocuments(pids, { parent: playlist });
                             }
-                        } else
-                            documentClass.deleteDocuments(ids);
+                        } else {
+                            if (tab instanceof Compendium) {
+                                for (let id of ids) {
+                                    let document = await tab.collection.getDocument(id);
+                                    await document?.delete();
+                                }
+                            } else {
+                                documentClass.deleteDocuments(ids);
+                            }
+                        }
 
                         if (ids.length != tab._groupSelect.size) {
                             ui.notifications.warn("Some of these documents weren't deleted because you do not have permissions to complete the request.");
@@ -666,7 +748,7 @@ Hooks.on("renderDocumentDirectory", (directory, html, options) => {
 
     $('.directory-list', html).on('pointerup', (event) => {
         //ignore if I clicked on a directory
-        if (event.originalEvent.path && event.originalEvent.path.length && $(event.originalEvent.path[0]).hasClass("directory-list"))
+        //if (event.originalEvent.path && event.originalEvent.path.length && $(event.originalEvent.path[0]).hasClass("directory-list"))
             MultipleDocumentSelection.clearTab.call(directory, directory);
     })
 });

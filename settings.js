@@ -4,8 +4,6 @@ export const registerSettings = function () {
     // Register any custom module settings here
 	let modulename = "multiple-document-selection";
 
-	const debouncedReload = foundry.utils.debounce(function () { window.location.reload(); }, 100);
-
 	game.settings.register(modulename, "long-press", {
 		name: i18n("MultipleDocumentSelection.long-press.name"),
 		hint: i18n("MultipleDocumentSelection.long-press.hint"),

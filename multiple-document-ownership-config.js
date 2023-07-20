@@ -98,6 +98,21 @@ export const WithOwnershipConfig = (ConfigClass) => {
         get isEditable() {
             return game.user.isGM;
         }
+
+        _getHeaderButtons() {
+            const buttons = [
+                {
+                    label: "Close",
+                    class: "close",
+                    icon: "fas fa-times",
+                    onclick: () => this.close()
+                }
+            ];
+            for (let cls of this.constructor._getInheritanceChain()) {
+                Hooks.call(`get${cls.name}HeaderButtons`, this, buttons);
+            }
+            return buttons;
+        }
     }
 
     const constructorName = "MultipleDocumentOwnershipConfig";

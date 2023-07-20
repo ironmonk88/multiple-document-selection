@@ -1,8 +1,9 @@
-.sidebar-tab.directory.multiple-select {
+.sidebar-tab.multiple-select:not(.Compendium-sidebar) {
     position: relative;
 }
-    
-.sidebar-tab.directory.multiple-select:after {
+
+.sidebar-tab.multiple-select:after,
+.sidebar-tab .compendium.multiple-select:after {
     content: '';
     position: absolute;
     width: calc(100% - 2px);
@@ -14,19 +15,24 @@
     pointer-events: none;
 }
 
-.system-dsa5 .sidebar-tab.directory.multiple-select:after {
+.system-dsa5 .sidebar-tab.multiple-select:after,
+.system-dsa5 .sidebar-tab .compendium.multiple-select:after {
     height: calc(100% - 7px);
 }
 
-.sidebar-tab.directory.multiple-select .directory-list .directory-item.document.selected,
-.sidebar-tab.directory.multiple-select .directory-list .directory-item .sound.selected {
+.sidebar-tab.multiple-select .directory-list .directory-item.document.selected,
+.sidebar-tab.multiple-select .directory-list .directory-item .sound.selected,
+.sidebar-tab .compendium.multiple-select .directory-list .directory-item.document.selected,
+.sidebar-tab .compendium.multiple-select .directory-list .directory-item .sound.selected {
     background-color: #ff6400 !important;
 }
 
-.sidebar-tab.directory.multiple-select .directory-list .directory-item.scene.selected {
+.sidebar-tab.multiple-select .directory-list .directory-item.scene.selected,
+.sidebar-tab .compendium.multiple-select .directory-list .directory-item.scene.selected {
     color: #ff6400;
 }
-.sidebar-tab.directory.multiple-select .directory-list .directory-item.scene.selected:after {
+.sidebar-tab.multiple-select .directory-list .directory-item.scene.selected:after,
+.sidebar-tab .compendium.multiple-select .directory-list .directory-item.scene.selected:after {
     content: ' ';
     position: absolute;
     top: 0px;

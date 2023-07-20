@@ -1,3 +1,11 @@
+## Version 11.02
+
+Added support for Compendium directories
+
+Fixed issue with changing ownership of multiple documents
+
+Fixed issue with not releasing the selection when clicking off the selection.
+
 ## Version 11.01
 
 Adding support for v11
