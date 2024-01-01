@@ -29,6 +29,8 @@ export class MultipleDocumentSelection {
             libWrapper.ignore_conflicts("multiple-document-selection", "monks-common-display", "ActorDirectory.prototype._onClickEntryName");
         }
 
+        game.MultipleDocumentSelection = MultipleDocumentSelection;
+
         registerSettings();
 
         let additionalDirectories = [];
