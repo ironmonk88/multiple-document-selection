@@ -17,6 +17,24 @@ export let setting = key => {
     return game.settings.get("multiple-document-selection", key);
 };
 
+export let patchFunc = (prop, func, type = "WRAPPER") => {
+    let nonLibWrapper = () => {
+        const oldFunc = eval(prop);
+        eval(`${prop} = function (event) {
+            return func.call(this, ${type != "OVERRIDE" ? "oldFunc.bind(this)," : ""} ...arguments);
+        }`);
+    }
+    if (game.modules.get("lib-wrapper")?.active) {
+        try {
+            libWrapper.register("monks-enhanced-journal", prop, func, type);
+        } catch (e) {
+            nonLibWrapper();
+        }
+    } else {
+        nonLibWrapper();
+    }
+}
+
 export class MultipleDocumentSelection {
     static app = null;
     static compendiums = [];
@@ -126,7 +144,7 @@ export class MultipleDocumentSelection {
                             const playlistId = li.parents(".playlist").data("document-id");
                             const playlist = game.playlists.get(playlistId);
                             const sound = playlist.sounds.get(id);
-                            let docData = mergeObject(data, { uuid: sound.uuid });
+                            let docData = foundry.utils.mergeObject(data, { uuid: sound.uuid });
 
                             let dragEvent = {
                                 target: event.target,
@@ -138,9 +156,9 @@ export class MultipleDocumentSelection {
                             await wrapped(dragEvent);
                         } else {
                             let document = this.constructor.collection.get(id);
-                            let docData = mergeObject(data, { uuid: document.uuid });
+                            let docData = foundry.utils.mergeObject(data, { uuid: document.uuid });
                             if (docData.type == "Tile") delete docData.data;
-                            await this._handleDroppedDocument(target, docData);
+                            await this._handleDroppedEntry(target, docData);
                         }
                     }
                     MultipleDocumentSelection.clearTab(this);
@@ -148,7 +166,7 @@ export class MultipleDocumentSelection {
                     return wrapped(...args);
             } else if (data.groupSelect) {
                 // Dropping multiple files here
-                let groupSelect = duplicate(data.groupSelect);
+                let groupSelect = foundry.utils.duplicate(data.groupSelect);
                 delete data.groupSelect;
                 let uuid = data.uuid.substr(0, data.uuid.length - 16);
                 const target = event.target.closest(".directory-item") || null;
@@ -280,7 +298,7 @@ export class MultipleDocumentSelection {
             }
         }
 
-        for (let tabName of ["ActorDirectory", "CardsDirectory", "ItemDirectory", "JournalDirectory", "SceneDirectory", "RollTableDirectory", "MacroDirectory"].concat(additionalDirectories.map(d => d.name))) {
+        for (let tabName of ["ActorDirectory", "CardsDirectory", "ItemDirectory", "JournalDirectory", "RollTableDirectory", "MacroDirectory"].concat(additionalDirectories.map(d => d.name))) {
             Hooks.on(`get${tabName}EntryContext`, (html, menuItems, tab) => {
                 window.setTimeout(() => {
                     // make sure we're the last one to activate
@@ -349,6 +367,86 @@ export class MultipleDocumentSelection {
                 );
             })
         }
+
+        Hooks.on(`getSceneDirectoryEntryContext`, (html, menuItems, tab) => {
+            window.setTimeout(() => {
+                // make sure we're the last one to activate
+                for (let menu of menuItems) {
+                    if (!menu.multiple) {
+                        let oldCondition = menu.condition;
+                        menu.condition = function (li) {
+                            if (html.hasClass("multiple-select"))
+                                return false;
+                            return oldCondition ? oldCondition(li) : true;
+                        }
+                    }
+                }
+            }, 500);
+
+            menuItems.push(
+                {
+                    icon: '<i class="fas fa-trash"></i>',
+                    name: "Delete Multiple",
+                    multiple: true,
+                    condition: (li) => {
+                        return game.user.isGM && html.hasClass("multiple-select") && li.hasClass('selected');
+                    },
+                    callback: (li) => {
+                        //let tab = Object.values(ui.sidebar.tabs).find(t => t.constructor.name == tabName);
+                        MultipleDocumentSelection.deleteDialog(tab);
+                    }
+                },
+                {
+                    icon: '<i class="far fa-copy"></i>',
+                    name: "Duplicate Multiple",
+                    multiple: true,
+                    condition: (li) => {
+                        return game.user.isGM && html.hasClass("multiple-select") && li.hasClass('selected');
+                    },
+                    callback: (li) => {
+                        //let tab = Object.values(ui.sidebar.tabs).find(t => t.constructor.name == tabName);
+                        MultipleDocumentSelection.duplicateDocuments(tab);
+                    }
+                },
+                {
+                    icon: '<i class="fas fa-compass fa-fw"></i>',
+                    name: "Toggle Navigation Multiple",
+                    multiple: true,
+                    condition: (li) => {
+                        return game.user.isGM && html.hasClass("multiple-select") && li.hasClass('selected');
+                    },
+                    callback: (li) => {
+                        //let tab = Object.values(ui.sidebar.tabs).find(t => t.constructor.name == tabName);
+                        MultipleDocumentSelection.toggleNavigation(tab);
+                    }
+                },
+                {
+                    icon: '<i class="fas fa-lock"></i>',
+                    name: "Configure Ownership",
+                    multiple: true,
+                    condition: (li) => {
+                        let entry = [...tab.collection][0];
+                        return game.user.isGM && html.hasClass("multiple-select") && li.hasClass('selected') && entry?.ownership;
+                    },
+                    callback: (li) => {
+                        //let tab = Object.values(ui.sidebar.tabs).find(t => t.constructor.name == tabName);
+                        MultipleDocumentSelection.ownershipDialog(tab, li);
+                    }
+                },
+                {
+                    icon: '<i class="fas fa-file-export"></i>',
+                    name: "Export Data",
+                    multiple: true,
+                    condition: (li) => {
+                        return html.hasClass("multiple-select") && li.hasClass('selected') && game.system.id !== "pf2e";
+                    },
+                    callback: (li) => {
+                        //let tab = Object.values(ui.sidebar.tabs).find(t => t.constructor.name == tabName);
+                        MultipleDocumentSelection.exportDocuments(tab);
+                    }
+                }
+            );
+        })
 
         Hooks.on("getCompendiumEntryContext", (html, menuItems) => {
             window.setTimeout(() => {
@@ -424,21 +522,13 @@ export class MultipleDocumentSelection {
             );
         });
 
-        let createContext = function (app, html, selector, menuItems, {hookName="EntryContext", ...options}={}) {
-            for ( const cls of app.constructor._getInheritanceChain() ) {
+        patchFunc("ContextMenu.prototype.constructor.create", function (app, html, selector, menuItems, { hookName = "EntryContext", ...options } = {}) {
+            for (const cls of app.constructor._getInheritanceChain()) {
                 Hooks.call(`get${cls.name}${hookName}`, html, menuItems, app);
             }
 
-            if(menuItems) return new ContextMenu(html, selector, menuItems, options);
-         }
-
-        if (game.modules.get("lib-wrapper")?.active) {
-            libWrapper.register("multiple-document-selection", "ContextMenu.prototype.constructor.create", createContext, "OVERRIDE");
-        } else {
-            ContextMenu.prototype.constructor.create = function (event) {
-                return createContext.call(this, ...arguments);
-            }
-        }
+            if (menuItems) return new ContextMenu(html, selector, menuItems, options);
+        }, "OVERRIDE");
     }
 
     static selectPlaylistSound(event) {
@@ -664,6 +754,20 @@ export class MultipleDocumentSelection {
         }
     }
 
+    static async toggleNavigation(tab) {
+        if (tab) {
+            const collection = tab.constructor.collection;
+            let items = [];
+            for (let id of tab._groupSelect) {
+                let document = collection.get(id);
+                if (document.isOwner) {
+                    await document.update({ navigation: !document.navigation });
+                }
+            }
+            MultipleDocumentSelection.clearTab(tab);
+        }
+    }
+
     static ownershipDialog(tab, li) {
         if (tab) {
             //show the delete dialog for multiple entries
@@ -675,7 +779,7 @@ export class MultipleDocumentSelection {
                 documents.push(collection.get(id));
             }
 
-            const configClass = WithOwnershipConfig(isNewerVersion(game.version, "9.99999") ? DocumentOwnershipConfig : PermissionControl);
+            const configClass = WithOwnershipConfig(DocumentOwnershipConfig);
             new configClass({ documents, apps: {}, uuid: "", testUserPermission: () => { return true; }, isOwner: true }, {
                 top: Math.min(li[0].offsetTop, window.innerHeight - 350),
                 left: window.innerWidth - 720

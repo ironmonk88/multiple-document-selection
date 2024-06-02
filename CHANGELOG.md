@@ -1,3 +1,11 @@
+## Version 12.01
+
+v12 Compatibility
+
+Added the option to toggle navigation on multiple scenes
+
+Fixed an issue with backwards compatibility
+
 ## Version 11.03
 
 Added support for MATT.
